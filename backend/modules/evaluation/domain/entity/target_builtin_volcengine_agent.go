@@ -6,9 +6,10 @@ package entity
 type VolcengineAgent struct {
 	ID int64
 
-	Name                     string
-	Description              string
+	Name                     string `json:"-"`
+	Description              string `json:"-"`
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint
+	BaseInfo                 *BaseInfo `json:"-"`
 }
 
 type VolcengineAgentEndpoint struct {

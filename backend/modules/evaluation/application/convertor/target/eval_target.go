@@ -183,7 +183,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				Name:                     &targetVersionDO.VolcengineAgent.Name,
 				Description:              &targetVersionDO.VolcengineAgent.Description,
 				VolcengineAgentEndpoints: endpoints,
-				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.CozeWorkflow.BaseInfo),
+				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
 		}
 	default:
