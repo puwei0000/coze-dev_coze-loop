@@ -9,7 +9,7 @@ type VolcengineAgent struct {
 	Name                     string `json:"-"`
 	Description              string `json:"-"`
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint
-	BaseInfo                 *BaseInfo `json:"-"`
+	BaseInfo                 *BaseInfo `json:"-"` // 基础信息
 }
 
 type VolcengineAgentEndpoint struct {
