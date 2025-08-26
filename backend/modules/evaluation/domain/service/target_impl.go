@@ -332,8 +332,10 @@ func setSpanInputOutput(spanParam *targetSpanTagsParams, do *entity.EvalTarget, 
 				Type: tracespec.ModelMessagePartType(content.GetContentType()),
 			}
 		}
-		spanParam.InputToken = outputData.EvalTargetUsage.InputTokens
-		spanParam.OutputToken = outputData.EvalTargetUsage.OutputTokens
+		if outputData.EvalTargetUsage != nil {
+			spanParam.InputToken = outputData.EvalTargetUsage.InputTokens
+			spanParam.OutputToken = outputData.EvalTargetUsage.OutputTokens
+		}
 	}
 }
 
