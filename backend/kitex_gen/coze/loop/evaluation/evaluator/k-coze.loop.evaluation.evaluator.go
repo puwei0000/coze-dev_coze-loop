@@ -6832,6 +6832,48 @@ func (p *RunEvaluatorRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -6990,6 +7032,48 @@ func (p *RunEvaluatorRequest) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunEvaluatorRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TaskID = _field
+	return offset, nil
+}
+
+func (p *RunEvaluatorRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Biz = _field
+	return offset, nil
+}
+
+func (p *RunEvaluatorRequest) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DisableTracing = _field
+	return offset, nil
+}
+
 func (p *RunEvaluatorRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -7047,7 +7131,10 @@ func (p *RunEvaluatorRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -7065,6 +7152,9 @@ func (p *RunEvaluatorRequest) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field11Length()
+		l += p.field12Length()
+		l += p.field13Length()
 		l += p.field100Length()
 		l += p.field255Length()
 	}
@@ -7125,6 +7215,33 @@ func (p *RunEvaluatorRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter)
 	if p.IsSetTurnID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 7)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.TurnID)
+	}
+	return offset
+}
+
+func (p *RunEvaluatorRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTaskID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 11)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TaskID)
+	}
+	return offset
+}
+
+func (p *RunEvaluatorRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBiz() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Biz)
+	}
+	return offset
+}
+
+func (p *RunEvaluatorRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDisableTracing() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 13)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.DisableTracing)
 	}
 	return offset
 }
@@ -7212,6 +7329,33 @@ func (p *RunEvaluatorRequest) field7Length() int {
 	return l
 }
 
+func (p *RunEvaluatorRequest) field11Length() int {
+	l := 0
+	if p.IsSetTaskID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TaskID)
+	}
+	return l
+}
+
+func (p *RunEvaluatorRequest) field12Length() int {
+	l := 0
+	if p.IsSetBiz() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Biz)
+	}
+	return l
+}
+
+func (p *RunEvaluatorRequest) field13Length() int {
+	l := 0
+	if p.IsSetDisableTracing() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *RunEvaluatorRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -7273,6 +7417,27 @@ func (p *RunEvaluatorRequest) DeepCopy(s interface{}) error {
 	if src.TurnID != nil {
 		tmp := *src.TurnID
 		p.TurnID = &tmp
+	}
+
+	if src.TaskID != nil {
+		var tmp string
+		if *src.TaskID != "" {
+			tmp = kutils.StringDeepCopy(*src.TaskID)
+		}
+		p.TaskID = &tmp
+	}
+
+	if src.Biz != nil {
+		var tmp string
+		if *src.Biz != "" {
+			tmp = kutils.StringDeepCopy(*src.Biz)
+		}
+		p.Biz = &tmp
+	}
+
+	if src.DisableTracing != nil {
+		tmp := *src.DisableTracing
+		p.DisableTracing = &tmp
 	}
 
 	if src.Ext != nil {

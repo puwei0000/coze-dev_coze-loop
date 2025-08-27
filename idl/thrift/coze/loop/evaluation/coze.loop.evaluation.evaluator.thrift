@@ -203,6 +203,10 @@ struct RunEvaluatorRequest {
     6: optional i64 item_id (api.body='item_id', api.js_conv='true', go.tag='json:"item_id"')
     7: optional i64 turn_id (api.body='turn_id', api.js_conv='true', go.tag='json:"turn_id"')
 
+    11: optional string task_id // 单个biz下对应的task_id，这里对应方舟的task_id
+    12: optional string biz // 为了聚合计费使用的tag
+    13: optional bool disable_tracing // 取消Trace上报，本次填True，默认False
+
     100: optional map<string, string> ext (api.body='ext')
 
     255: optional base.Base Base

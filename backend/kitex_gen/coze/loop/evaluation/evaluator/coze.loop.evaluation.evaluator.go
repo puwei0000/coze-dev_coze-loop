@@ -9231,11 +9231,17 @@ type RunEvaluatorRequest struct {
 	// experiment id
 	ExperimentID *int64 `thrift:"experiment_id,4,optional" frugal:"4,optional,i64" json:"experiment_id" form:"experiment_id" `
 	// experiment run id
-	ExperimentRunID *int64            `thrift:"experiment_run_id,5,optional" frugal:"5,optional,i64" json:"experiment_run_id" form:"experiment_run_id" `
-	ItemID          *int64            `thrift:"item_id,6,optional" frugal:"6,optional,i64" json:"item_id" form:"item_id" `
-	TurnID          *int64            `thrift:"turn_id,7,optional" frugal:"7,optional,i64" json:"turn_id" form:"turn_id" `
-	Ext             map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Base            *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ExperimentRunID *int64 `thrift:"experiment_run_id,5,optional" frugal:"5,optional,i64" json:"experiment_run_id" form:"experiment_run_id" `
+	ItemID          *int64 `thrift:"item_id,6,optional" frugal:"6,optional,i64" json:"item_id" form:"item_id" `
+	TurnID          *int64 `thrift:"turn_id,7,optional" frugal:"7,optional,i64" json:"turn_id" form:"turn_id" `
+	// 单个biz下对应的task_id，这里对应方舟的task_id
+	TaskID *string `thrift:"task_id,11,optional" frugal:"11,optional,string" form:"task_id" json:"task_id,omitempty" query:"task_id"`
+	// 为了聚合计费使用的tag
+	Biz *string `thrift:"biz,12,optional" frugal:"12,optional,string" form:"biz" json:"biz,omitempty" query:"biz"`
+	// 取消Trace上报，本次填True，默认False
+	DisableTracing *bool             `thrift:"disable_tracing,13,optional" frugal:"13,optional,bool" form:"disable_tracing" json:"disable_tracing,omitempty" query:"disable_tracing"`
+	Ext            map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base           *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRunEvaluatorRequest() *RunEvaluatorRequest {
@@ -9319,6 +9325,42 @@ func (p *RunEvaluatorRequest) GetTurnID() (v int64) {
 	return *p.TurnID
 }
 
+var RunEvaluatorRequest_TaskID_DEFAULT string
+
+func (p *RunEvaluatorRequest) GetTaskID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTaskID() {
+		return RunEvaluatorRequest_TaskID_DEFAULT
+	}
+	return *p.TaskID
+}
+
+var RunEvaluatorRequest_Biz_DEFAULT string
+
+func (p *RunEvaluatorRequest) GetBiz() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBiz() {
+		return RunEvaluatorRequest_Biz_DEFAULT
+	}
+	return *p.Biz
+}
+
+var RunEvaluatorRequest_DisableTracing_DEFAULT bool
+
+func (p *RunEvaluatorRequest) GetDisableTracing() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDisableTracing() {
+		return RunEvaluatorRequest_DisableTracing_DEFAULT
+	}
+	return *p.DisableTracing
+}
+
 var RunEvaluatorRequest_Ext_DEFAULT map[string]string
 
 func (p *RunEvaluatorRequest) GetExt() (v map[string]string) {
@@ -9363,6 +9405,15 @@ func (p *RunEvaluatorRequest) SetItemID(val *int64) {
 func (p *RunEvaluatorRequest) SetTurnID(val *int64) {
 	p.TurnID = val
 }
+func (p *RunEvaluatorRequest) SetTaskID(val *string) {
+	p.TaskID = val
+}
+func (p *RunEvaluatorRequest) SetBiz(val *string) {
+	p.Biz = val
+}
+func (p *RunEvaluatorRequest) SetDisableTracing(val *bool) {
+	p.DisableTracing = val
+}
 func (p *RunEvaluatorRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -9378,6 +9429,9 @@ var fieldIDToName_RunEvaluatorRequest = map[int16]string{
 	5:   "experiment_run_id",
 	6:   "item_id",
 	7:   "turn_id",
+	11:  "task_id",
+	12:  "biz",
+	13:  "disable_tracing",
 	100: "ext",
 	255: "Base",
 }
@@ -9400,6 +9454,18 @@ func (p *RunEvaluatorRequest) IsSetItemID() bool {
 
 func (p *RunEvaluatorRequest) IsSetTurnID() bool {
 	return p.TurnID != nil
+}
+
+func (p *RunEvaluatorRequest) IsSetTaskID() bool {
+	return p.TaskID != nil
+}
+
+func (p *RunEvaluatorRequest) IsSetBiz() bool {
+	return p.Biz != nil
+}
+
+func (p *RunEvaluatorRequest) IsSetDisableTracing() bool {
+	return p.DisableTracing != nil
 }
 
 func (p *RunEvaluatorRequest) IsSetExt() bool {
@@ -9485,6 +9551,30 @@ func (p *RunEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9625,6 +9715,39 @@ func (p *RunEvaluatorRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.TurnID = _field
 	return nil
 }
+func (p *RunEvaluatorRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TaskID = _field
+	return nil
+}
+func (p *RunEvaluatorRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Biz = _field
+	return nil
+}
+func (p *RunEvaluatorRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DisableTracing = _field
+	return nil
+}
 func (p *RunEvaluatorRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -9695,6 +9818,18 @@ func (p *RunEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -9843,6 +9978,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *RunEvaluatorRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskID() {
+		if err = oprot.WriteFieldBegin("task_id", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TaskID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+func (p *RunEvaluatorRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBiz() {
+		if err = oprot.WriteFieldBegin("biz", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Biz); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+func (p *RunEvaluatorRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDisableTracing() {
+		if err = oprot.WriteFieldBegin("disable_tracing", thrift.BOOL, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.DisableTracing); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
 func (p *RunEvaluatorRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -9926,6 +10115,15 @@ func (p *RunEvaluatorRequest) DeepEqual(ano *RunEvaluatorRequest) bool {
 	if !p.Field7DeepEqual(ano.TurnID) {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.TaskID) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.Biz) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.DisableTracing) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -10000,6 +10198,42 @@ func (p *RunEvaluatorRequest) Field7DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TurnID != *src {
+		return false
+	}
+	return true
+}
+func (p *RunEvaluatorRequest) Field11DeepEqual(src *string) bool {
+
+	if p.TaskID == src {
+		return true
+	} else if p.TaskID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TaskID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RunEvaluatorRequest) Field12DeepEqual(src *string) bool {
+
+	if p.Biz == src {
+		return true
+	} else if p.Biz == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Biz, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *RunEvaluatorRequest) Field13DeepEqual(src *bool) bool {
+
+	if p.DisableTracing == src {
+		return true
+	} else if p.DisableTracing == nil || src == nil {
+		return false
+	}
+	if *p.DisableTracing != *src {
 		return false
 	}
 	return true
