@@ -3,8 +3,6 @@
 
 package entity
 
-import "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-
 type CreateEvaluationSetParam struct {
 	SpaceID             int64
 	Name                string
@@ -110,7 +108,7 @@ type ExecuteEvalTargetParam struct {
 	SourceTargetVersion string
 	Input               *EvalTargetInputData
 	TargetType          EvalTargetType
-	EvalTarget          *entity.EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
+	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
 }
 
 type ListEvaluatorRequest struct {
