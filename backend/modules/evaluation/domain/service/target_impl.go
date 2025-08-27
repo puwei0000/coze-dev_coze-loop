@@ -260,6 +260,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID int64
 		SourceTargetVersion: evalTargetDO.EvalTargetVersion.SourceTargetVersion,
 		Input:               inputData,
 		TargetType:          evalTargetDO.EvalTargetType,
+		EvalTarget:          evalTargetDO,
 	})
 	if err != nil {
 		return nil, err
