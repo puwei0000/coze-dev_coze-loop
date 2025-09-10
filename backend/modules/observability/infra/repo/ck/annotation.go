@@ -185,6 +185,17 @@ func (a *AnnotationCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, t
 			{Column: clause.Column{Name: "updated_at"}, Desc: true},
 		}})
 	}
+	// 添加软删除过滤
+	sqlQuery = sqlQuery.Where("deleted_at = 0")
+	
+	// 添加分区优化查询
+	if param.StartTime > 0 && param.EndTime > 0 {
+		partitions := convertIntoPartitions(param.StartTime, param.EndTime)
+		sqlQuery = sqlQuery.
+			Where("start_date >= ?", partitions[0]).
+			Where("start_date <= ?", partitions[len(partitions)-1])
+	}
+	
 	if param.Limit > 0 {
 		sqlQuery = sqlQuery.Limit(int(param.Limit))
 	}
