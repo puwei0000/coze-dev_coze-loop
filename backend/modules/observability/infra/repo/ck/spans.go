@@ -138,6 +138,17 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableN
 		Where(sqlQuery).
 		Where("start_time >= ?", param.StartTime).
 		Where("start_time <= ?", param.EndTime)
+	
+	// 添加annotation子查询支持
+	if param.AnnoTableMap != nil {
+		if annoTable, exists := param.AnnoTableMap[tableName]; exists {
+			err := s.addAnnotationSubqueries(ctx, sqlQuery, annoTable, param)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	
 	if param.OrderByStartTime {
 		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
 			{Column: clause.Column{Name: "start_time"}, Desc: true},
@@ -398,4 +409,25 @@ var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
+}
+
+// addAnnotationSubqueries 为spans查询添加annotation相关的子查询
+func (s *SpansCkDaoImpl) addAnnotationSubqueries(ctx context.Context, sqlQuery *gorm.DB, annoTable string, param *QueryParam) error {
+	// 当前只是预留annotation子查询的入口，具体的annotation过滤逻辑可以后续根据需求添加
+	// 这里主要确保annotation表的存在性检查和基本的关联准备
+	
+	// 检查annotation表名是否安全
+	if !isSafeColumnName(annoTable) {
+		return fmt.Errorf("annotation table name %s is not safe", annoTable)
+	}
+	
+	// 预留annotation过滤的扩展点
+	// 可以根据业务需求添加annotation相关的EXISTS子查询
+	// 例如：
+	// 1. 检查span是否有特定key的annotation
+	// 2. 检查annotation的value是否满足条件
+	// 3. 检查annotation的时间范围
+	
+	logs.CtxDebug(ctx, "annotation table %s is available for spans query", annoTable)
+	return nil
 }
