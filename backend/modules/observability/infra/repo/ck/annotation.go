@@ -121,7 +121,6 @@ func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *ListAnnotationsP
 	return annotations, nil
 }
 
-// annoSqlParam 内部SQL构建参数
 type annoSqlParam struct {
 	Tables          []string
 	StartTime       int64
@@ -167,37 +166,28 @@ func (a *AnnotationCkDaoImpl) buildSql(ctx context.Context, param *annoSqlParam)
 
 // buildSingleSql 构建单表查询SQL
 func (a *AnnotationCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableName string, param *annoSqlParam) (*gorm.DB, error) {
-	sqlQuery := db.Table(tableName)
-	if param.StartTime > 0 {
-		sqlQuery = sqlQuery.Where("start_time >= ?", param.StartTime)
-	}
-	if param.EndTime > 0 {
-		sqlQuery = sqlQuery.Where("start_time <= ?", param.EndTime)
-	}
+	sqlQuery := db.
+		Table(tableName).
+		Where("deleted_at = 0")
+
 	if param.ID != "" {
 		sqlQuery = sqlQuery.Where("id = ?", param.ID)
 	}
 	if len(param.SpanIDs) > 0 {
 		sqlQuery = sqlQuery.Where("span_id IN (?)", param.SpanIDs)
 	}
+	sqlQuery = sqlQuery.
+		Where("start_time >= ?", param.StartTime).
+		Where("start_time <= ?", param.EndTime)
 	if param.DescByUpdatedAt {
 		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
 			{Column: clause.Column{Name: "updated_at"}, Desc: true},
 		}})
+	} else {
+		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "created_at"}, Desc: false},
+		}})
 	}
-	// 添加软删除过滤
-	sqlQuery = sqlQuery.Where("deleted_at = 0")
-	
-	// 添加分区优化查询
-	if param.StartTime > 0 && param.EndTime > 0 {
-		partitions := convertIntoPartitions(param.StartTime, param.EndTime)
-		sqlQuery = sqlQuery.
-			Where("start_date >= ?", partitions[0]).
-			Where("start_date <= ?", partitions[len(partitions)-1])
-	}
-	
-	if param.Limit > 0 {
-		sqlQuery = sqlQuery.Limit(int(param.Limit))
-	}
+	sqlQuery = sqlQuery.Limit(int(param.Limit))
 	return sqlQuery, nil
 }

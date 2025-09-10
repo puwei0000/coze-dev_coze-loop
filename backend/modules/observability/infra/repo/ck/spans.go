@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,19 +25,11 @@ const (
 	QueryTypeGetTrace  = "get_trace"
 	QueryTypeListSpans = "list_spans"
 
-	// 自动评估标签
-	AnnotationAutoEvaluateFieldPrefix = "evaluator_version_"
 	// 人工标注标签
 	AnnotationManualFeedbackFieldPrefix = "manual_feedback_"
-	// Coze会话反馈标签
-	AnnotationCozeChatFeedbackField = "feedback_coze"
 
-	// 自动评估标签类型
-	AnnotationAutoEvaluateType = "auto_evaluate"
 	// 人工标注标签类型
 	AnnotationManualFeedbackType = "manual_feedback"
-	// Coze反馈标签类型
-	AnnotationCozeChatFeedbackType = "coze_feedback"
 )
 
 type QueryParam struct {
@@ -116,7 +107,6 @@ type buildSqlParam struct {
 	annoTable   string
 	queryParam  *QueryParam
 	db          *gorm.DB
-	partitions  []string
 	omitColumns []string
 }
 
@@ -129,7 +119,6 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm
 			annoTable:   param.AnnoTableMap[table],
 			queryParam:  param,
 			db:          db,
-			partitions:  convertIntoPartitions(param.StartTime, param.EndTime),
 			omitColumns: param.OmitColumns,
 		})
 		if err != nil {
@@ -163,23 +152,11 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 	if err != nil {
 		return nil, err
 	}
-	queryColumns := getColumnStr(spanColumns, param.omitColumns)
 	sqlQuery = param.db.
 		Table(param.spanTable).
-		Select(queryColumns).
 		Where(sqlQuery).
-		Where("start_date >= ?", param.partitions[0]).
-		Where("start_date <= ?", param.partitions[len(param.partitions)-1]).
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
-	if param.queryParam.QueryType == QueryTypeListSpans {
-		// 针对list spans添加子查询
-		subQuery, err := s.buildSubQuerySql(ctx, param)
-		if err != nil {
-			return nil, err
-		}
-		sqlQuery = sqlQuery.Where("start_time in (?)", subQuery)
-	}
 	if param.queryParam.OrderByStartTime {
 		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
 			{Column: clause.Column{Name: "start_time"}, Desc: true},
@@ -200,8 +177,6 @@ func (s *SpansCkDaoImpl) buildSubQuerySql(ctx context.Context, param *buildSqlPa
 		Table(param.spanTable).
 		Select("start_time").
 		Where(sqlQuery).
-		Where("start_date >= ?", param.partitions[0]).
-		Where("start_date <= ?", param.partitions[len(param.partitions)-1]).
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
 	if param.queryParam.OrderByStartTime {
@@ -298,8 +273,7 @@ func (s *SpansCkDaoImpl) buildFieldCondition(ctx context.Context, db *gorm.DB, f
 		if len(fieldValues) != 1 {
 			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
 		}
-		// 使用hasTokens函数进行ClickHouse的token匹配
-		queryChain = queryChain.Where(fmt.Sprintf("hasTokens(%s, ?)", filter.FieldName), fieldValues[0])
+		queryChain = queryChain.Where(fmt.Sprintf("%s like ?", filter.FieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
 	case loop_span.QueryTypeEnumEq:
 		if len(fieldValues) != 1 {
 			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
@@ -359,11 +333,7 @@ func (s *SpansCkDaoImpl) buildFieldCondition(ctx context.Context, db *gorm.DB, f
 }
 
 func (s *SpansCkDaoImpl) isAnnotationFilter(fieldName string) bool {
-	if strings.HasPrefix(fieldName, AnnotationAutoEvaluateFieldPrefix) {
-		return true
-	} else if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
-		return true
-	} else if fieldName == AnnotationCozeChatFeedbackField {
+	if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
 		return true
 	} else {
 		return false
@@ -373,17 +343,7 @@ func (s *SpansCkDaoImpl) isAnnotationFilter(fieldName string) bool {
 func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSqlParam, filter *loop_span.FilterField) (*gorm.DB, error) {
 	queryChain := param.db
 	fieldName := filter.FieldName
-	if strings.HasPrefix(fieldName, AnnotationAutoEvaluateFieldPrefix) {
-		// evaluator_version_{version_id}
-		evaluatorVersionID := fieldName[len(AnnotationAutoEvaluateFieldPrefix):]
-		if evaluatorVersionID == "" {
-			return nil, fmt.Errorf("invalid auto evaluator field name %s", fieldName)
-		}
-		queryChain = queryChain.
-			Where("annotation_type = ?", AnnotationAutoEvaluateType).
-			Where("has(annotation_index, ?)", evaluatorVersionID).
-			Where("get_json_object(metadata, '$.evaluator_version_id') = ?", evaluatorVersionID)
-	} else if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
+	if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
 		// manual_feedback_{tag_key_id}
 		tagKeyId := fieldName[len(AnnotationManualFeedbackFieldPrefix):]
 		if tagKeyId == "" {
@@ -392,10 +352,6 @@ func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSql
 		queryChain = queryChain.
 			Where("annotation_type = ?", AnnotationManualFeedbackType).
 			Where("key = ?", tagKeyId)
-	} else if fieldName == AnnotationCozeChatFeedbackField {
-		queryChain = queryChain.
-			Where("annotation_type = ?", AnnotationCozeChatFeedbackType).
-			Where("key = ?", "chat_feedback")
 	} else {
 		return nil, fmt.Errorf("field name %s not supported for annotation, not supposed to be here", fieldName)
 	}
@@ -423,7 +379,7 @@ func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSql
 		}
 		queryChain = queryChain.Where(fieldSql)
 	}
-	param.queryParam.Filters.Traverse(func(f *loop_span.FilterField) error {
+	_ = param.queryParam.Filters.Traverse(func(f *loop_span.FilterField) error {
 		if f.FieldName == loop_span.SpanFieldSpaceId {
 			commonSql, err := s.buildFieldCondition(ctx, param.db, f)
 			if err != nil {
@@ -438,8 +394,6 @@ func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSql
 		Select("span_id").
 		Where(queryChain).
 		Where("deleted_at = 0").
-		Where("start_date >= ?", param.partitions[0]).
-		Where("start_date <= ?", param.partitions[len(param.partitions)-1]).
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
 	return param.db.Where("span_id in (?)", subsql), nil
@@ -559,65 +513,7 @@ func quoteSQLName(data string) string {
 	return buf.String()
 }
 
-// 时间分区转换函数
-func convertIntoPartitions(startAt, endAt int64) []string {
-	// 将微秒时间戳转换为日期分区
-	startTime := time.Unix(startAt/1000000, 0)
-	endTime := time.Unix(endAt/1000000, 0)
-	
-	startDate := startTime.Format("2006-01-02")
-	endDate := endTime.Format("2006-01-02")
-	
-	return []string{startDate, endDate}
-}
-
-// 获取列字符串
-func getColumnStr(allColumns []string, omitColumns []string) string {
-	if len(omitColumns) == 0 {
-		return strings.Join(allColumns, ", ")
-	}
-	omitMap := make(map[string]bool)
-	for _, col := range omitColumns {
-		omitMap[col] = true
-	}
-	var resultColumns []string
-	for _, col := range allColumns {
-		if !omitMap[col] {
-			resultColumns = append(resultColumns, col)
-		}
-	}
-	return strings.Join(resultColumns, ", ")
-}
-
 var (
-	spanColumns = []string{
-		"start_time",
-		"logid",
-		"span_id",
-		"trace_id",
-		"parent_id",
-		"duration",
-		"psm",
-		"call_type",
-		"space_id",
-		"span_type",
-		"span_name",
-		"method",
-		"status_code",
-		"input",
-		"output",
-		"object_storage",
-		"system_tags_string",
-		"system_tags_long",
-		"system_tags_float",
-		"tags_string",
-		"tags_long",
-		"tags_bool",
-		"tags_float",
-		"tags_byte",
-		"reserve_create_time",
-		"logic_delete_date",
-	}
 	defSuperFieldsMap = map[string]bool{
 		loop_span.SpanFieldStartTime:       true,
 		loop_span.SpanFieldSpanId:          true,
