@@ -87,6 +87,9 @@ func (a *AnnotationCkDaoImpl) Get(ctx context.Context, params *GetAnnotationPara
 	if err != nil {
 		return nil, err
 	}
+	logs.CtxInfo(ctx, "Get Annotation SQL: %s", db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	}))
 	var annotations []*model.ObservabilityAnnotation
 	if err := db.Find(&annotations).Error; err != nil {
 		return nil, err
@@ -114,6 +117,9 @@ func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *ListAnnotationsP
 	if err != nil {
 		return nil, err
 	}
+	logs.CtxInfo(ctx, "List Annotations SQL: %s", db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	}))
 	var annotations []*model.ObservabilityAnnotation
 	if err := db.Find(&annotations).Error; err != nil {
 		return nil, err
@@ -144,7 +150,11 @@ func (a *AnnotationCkDaoImpl) buildSql(ctx context.Context, param *annoSqlParam)
 	if len(tableQueries) == 0 {
 		return nil, fmt.Errorf("no table configured")
 	} else if len(tableQueries) == 1 {
-		return tableQueries[0], nil
+		query := tableQueries[0].ToSQL(func(tx *gorm.DB) *gorm.DB {
+			return tx.Find(nil)
+		})
+		query += " SETTINGS final = 1"
+		return db.Raw(query), nil
 	} else {
 		queries := make([]string, 0)
 		for i := 0; i < len(tableQueries); i++ {
@@ -159,7 +169,7 @@ func (a *AnnotationCkDaoImpl) buildSql(ctx context.Context, param *annoSqlParam)
 		} else {
 			sql += " ORDER BY created_at ASC"
 		}
-		sql += fmt.Sprintf(" LIMIT %d", param.Limit)
+		sql += fmt.Sprintf(" LIMIT %d SETTINGS final = 1", param.Limit)
 		return db.Raw(sql), nil
 	}
 }

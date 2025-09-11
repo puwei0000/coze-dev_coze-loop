@@ -99,6 +99,9 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.O
 	if err := sql.Find(&spans).Error; err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
+	for _, span := range spans {
+		span.SystemTagsString[loop_span.SpanFieldTenant] = "cozeloop" // tenant
+	}
 	return spans, nil
 }
 
@@ -154,28 +157,6 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 	}
 	sqlQuery = param.db.
 		Table(param.spanTable).
-		Where(sqlQuery).
-		Where("start_time >= ?", param.queryParam.StartTime).
-		Where("start_time <= ?", param.queryParam.EndTime)
-	if param.queryParam.OrderByStartTime {
-		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-			{Column: clause.Column{Name: "start_time"}, Desc: true},
-			{Column: clause.Column{Name: "span_id"}, Desc: true},
-		}})
-	}
-	sqlQuery = sqlQuery.Limit(int(param.queryParam.Limit))
-	return sqlQuery, nil
-}
-
-// 根据start_date查询start_time的子查询
-func (s *SpansCkDaoImpl) buildSubQuerySql(ctx context.Context, param *buildSqlParam) (*gorm.DB, error) {
-	sqlQuery, err := s.buildSqlForFilterFields(ctx, param, param.queryParam.Filters)
-	if err != nil {
-		return nil, err
-	}
-	sqlQuery = param.db.
-		Table(param.spanTable).
-		Select("start_time").
 		Where(sqlQuery).
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
@@ -396,7 +377,10 @@ func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSql
 		Where("deleted_at = 0").
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
-	return param.db.Where("span_id in (?)", subsql), nil
+	query := subsql.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	})
+	return param.db.Where("span_id in (?)", param.db.Raw(query+" SETTINGS final = 1")), nil
 }
 
 func (s *SpansCkDaoImpl) getSuperFieldsMap(ctx context.Context) map[string]bool {
