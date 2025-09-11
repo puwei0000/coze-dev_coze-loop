@@ -208,7 +208,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT * FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_string IN ('123')) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 FINAL) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_string IN ('123')) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 	}
 	for _, tc := range testCases {
